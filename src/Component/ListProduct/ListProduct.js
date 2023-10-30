@@ -1,27 +1,33 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 
 const ListProduct = (props) => {
-  const amountInputRef = useRef();
-  const [amountIsValid, setAmountIsValid] = useState(true);
-
-  const submitHandler = (event, enteredAmountNumber) => {
+ const crudUrl = "https://crudcrud.com/api/eb9094b2385b4726bd008e8bc2787fca"
+  const submitHandler = async (event, product) => {
     event.preventDefault();
+    try {
+      const response = await fetch(`${crudUrl}/cart`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(product),
+      });
 
-    if (enteredAmountNumber < 1 || enteredAmountNumber > 5) {
-      setAmountIsValid(false);
-      setTimeout(() => {
-        setAmountIsValid(true);
-      }, 3000);
-      return;
+      if (!response.ok) {
+        throw new Error('Failed to add product.');
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
     }
-    props.onAddToCart(enteredAmountNumber);
+    props.onAddToCart(product);
+    console.log(product)
   };
-
+  
   return (
     <div>
       <ul>
-        {props.products.map((product, index) => (
-          <div key={index}>
+        {props.products.map((product) => (
+          <div key={product.id}>
             <li>
               <strong>Medicine Name:</strong> {product.mName}
             </li>
@@ -34,11 +40,12 @@ const ListProduct = (props) => {
             <li>
               <strong>Quantity:</strong> {product.quantity}
             </li>
-            <form onSubmit={(event) => submitHandler(event, +amountInputRef.current.value)}>
-              <input type="number" ref={amountInputRef} />
-              <button type="submit">Add to Cart</button>
-            </form>
-            {!amountIsValid && <p>Amount is not valid (should be between 1 and 5).</p>}
+            <button
+              type="submit"
+              onClick={(event) => submitHandler(event, product)}
+            >
+              Add to Cart
+            </button>
           </div>
         ))}
       </ul>

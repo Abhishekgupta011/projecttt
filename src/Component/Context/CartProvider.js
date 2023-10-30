@@ -1,19 +1,30 @@
-import { useReducer } from "react";
+import { useReducer  , useEffect} from "react";
 import CartContext from "./CartContext";
 
 const defaultCartState = {
-  items: [],
+  products: [],
   totalAmount: 0,
 };
-
+const  crudUrl = "https://crudcrud.com/api/eb9094b2385b4726bd008e8bc2787fca"
 const cartReducer = (state, action) => {
+  if(action.type==="INITIALCART"){
+
+      let totalAmount = 0;
+      totalAmount = action.products.reduce((acc, item) => acc+item.price*item.quantity,0);
   
+      console.log('totalamount',totalAmount);
+      return {
+          products: action.products,
+          totalAmount : totalAmount,
+  
+      }
+  }
   if (action.type === "ADD") {
     
-    const existingCartItemIndex = state.items.findIndex(
+    const existingCartItemIndex = state.products.findIndex(
       (item) => item.id === action.item.id
     );
-    const existingCartItem = state.items[existingCartItemIndex];
+    const existingCartItem = state.products[existingCartItemIndex];
   
     const updatedTotalAmount = state.totalAmount + action.item.price*action.item.amount ;
   
@@ -24,24 +35,24 @@ const cartReducer = (state, action) => {
         ...existingCartItem,
         amount: existingCartItem.amount + action.item.amount,
       };
-      updatedItems = [...state.items];
+      updatedItems = [...state.products];
       updatedItems[existingCartItemIndex] = updatedItem;
     } else {
-      updatedItems = state.items.concat({...action.item,
+      updatedItems = state.products.concat({...action.item,
         amount: action.item.amount,
       });
     }
   
     return {
       ...state,
-      items: updatedItems,
+      products: updatedItems,
       totalAmount: updatedTotalAmount,
     };
   }
   
 
   if (action.type === "REMOVE") {
-    const existingCartItemIndex = state.items.findIndex(
+    const existingCartItemIndex = state.products.findIndex(
       (item) => item.id === action.id
     );
     const existingItem = state.items[existingCartItemIndex];
@@ -49,24 +60,24 @@ const cartReducer = (state, action) => {
 
     let updatedItems;
     if (existingItem.amount === 1) {
-      updatedItems = state.items.filter((item) => item.id !== action.id);
+      updatedItems = state.products.filter((item) => item.id !== action.id);
     } else {
       const updatedItem = {
         ...existingItem,
         amount: existingItem.amount - 1,
       };
-      updatedItems = [...state.items];
+      updatedItems = [...state.products];
       updatedItems[existingCartItemIndex] = updatedItem;
     }
 
     return {
-      items: updatedItems,
+      products: updatedItems,
       totalAmount: updatedTotalAmount,
     };
   }
 
   if (action.type === 'DELETE') {
-    const existingCartItemIndex = state.items.findIndex(
+    const existingCartItemIndex = state.products.findIndex(
       (item) => item.id === action.id
     );
   
@@ -75,14 +86,14 @@ const cartReducer = (state, action) => {
       return state;
     }
   
-    const existingItem = state.items[existingCartItemIndex];
+    const existingItem = state.products[existingCartItemIndex];
     const updatedTotalAmount = state.totalAmount - existingItem.price * existingItem.amount;
   
     // Remove the item from the array
-    const updatedItems = state.items.filter((item) => item.id !== action.id);
+    const updatedItems = state.products.filter((item) => item.id !== action.id);
   
     return {
-      items: updatedItems,
+      products: updatedItems,
       totalAmount: updatedTotalAmount,
     };
   }
@@ -92,7 +103,31 @@ const cartReducer = (state, action) => {
 
 const CartProvider = (props) => {
   const [cartState, dispatchCartAction] = useReducer(cartReducer, defaultCartState);
+  useEffect(() => {
+    // This code will be executed when the component is initially mounted (page is refreshed)
+    const getProducts = async () => {
+      try {
+        const response = await fetch(`${crudUrl}/cart`,{
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch products.');
+        }
+        const products = await response.json();
+        console.log('Products:', products);
+        if(products){
+          dispatchCartAction({ type: "INITIALCART", products: products })
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
 
+    getProducts(); // Make the initial GET request on page refresh
+  }, []);
   const addItemHandler = (item) => {
     dispatchCartAction({ type: "ADD", item: item });
   };
@@ -104,9 +139,9 @@ const CartProvider = (props) => {
   const deleteItemsHandler  = (id) =>{
     dispatchCartAction({type: 'DELETE' , id:id})
   }
-
+ 
   const cartContext = {
-    items: cartState.items,
+    products: cartState.products,
     totalAmount: cartState.totalAmount,
     addItem: addItemHandler,
     removeItem: removeItemHandler,
